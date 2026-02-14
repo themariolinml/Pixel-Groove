@@ -76,15 +76,6 @@ class LocalStorageManager(StoragePort):
             thumbnail=f"{base}/original.{fmt}",
         )
 
-    async def get_image_bytes(self, node_id: str, gen_id: str) -> bytes | None:
-        """Read stored original image bytes back (needed for chaining nodes)."""
-        node_dir = self._base_path / node_id / gen_id
-        for ext in ("png", "jpg", "jpeg", "webp"):
-            path = node_dir / f"original.{ext}"
-            if path.exists():
-                return path.read_bytes()
-        return None
-
     async def read_media_bytes(self, url: str) -> Optional[bytes]:
         """Read original media file bytes from a /media/... URL path."""
         parts = url.split("/media/")

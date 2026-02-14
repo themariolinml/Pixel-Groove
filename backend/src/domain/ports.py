@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from .models.graph import Graph
+from .models.graph import Graph, NodeType
 from .models.media import MediaUrls
 
 
@@ -22,11 +22,16 @@ class AIGenerationPort(ABC):
     ) -> str: ...
 
     @abstractmethod
-    async def generate_image(self, prompt: str, params: Dict[str, Any]) -> bytes: ...
+    async def generate_image(
+            self, prompt: str, params: Dict[str, Any],
+            *, images: Optional[List[bytes]] = None,
+    ) -> bytes: ...
 
     @abstractmethod
     async def generate_video(
-            self, prompt: str, params: Dict[str, Any], *, image_data: Optional[bytes] = None
+            self, prompt: str, params: Dict[str, Any],
+            *, image_data: Optional[bytes] = None,
+            reference_images: Optional[List[bytes]] = None,
     ) -> bytes: ...
 
     @abstractmethod
@@ -95,3 +100,26 @@ class CanvasMemoryPort(ABC):
 
     @abstractmethod
     async def resolve(self, graph: Graph) -> str: ...
+
+
+class PromptEnrichmentPort(ABC):
+    """Contract for prompt enrichment (NoOp, Hybrid, RAG, DSPy, etc.)."""
+
+    @abstractmethod
+    async def enrich(self, prompt: str, node_type: NodeType) -> str: ...
+
+
+class ExperimentRepositoryPort(ABC):
+    """Contract for experiment persistence (JSON files, PostgreSQL, etc.)."""
+
+    @abstractmethod
+    async def save(self, experiment: "Experiment") -> None: ...
+
+    @abstractmethod
+    async def load(self, experiment_id: str) -> "Optional[Experiment]": ...
+
+    @abstractmethod
+    async def delete(self, experiment_id: str) -> None: ...
+
+    @abstractmethod
+    async def list_all(self) -> "List[Experiment]": ...

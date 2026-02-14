@@ -34,6 +34,7 @@ class MediaResult:
     prompt: str
     metadata: MediaMetadata
     generation_params: Dict = field(default_factory=dict)
+    original_prompt: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -50,6 +51,7 @@ class MediaResult:
                 "size_bytes": self.metadata.size_bytes,
             },
             "generation_params": self.generation_params,
+            "original_prompt": self.original_prompt,
         }
 
     @classmethod
@@ -70,4 +72,5 @@ class MediaResult:
                 size_bytes=meta.get("size_bytes"),
             ),
             generation_params=d.get("generation_params", {}),
+            original_prompt=d.get("original_prompt"),
         )

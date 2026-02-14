@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from ...core.exceptions import (
     CycleDetectedError,
     ExecutionError,
+    ExperimentNotFoundError,
     GraphNotFoundError,
     NodeNotFoundError,
     PortIncompatibleError,
@@ -17,6 +18,10 @@ def add_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(NodeNotFoundError)
     async def node_not_found(request: Request, exc: NodeNotFoundError):
+        return JSONResponse(status_code=404, content={"error": str(exc)})
+
+    @app.exception_handler(ExperimentNotFoundError)
+    async def experiment_not_found(request: Request, exc: ExperimentNotFoundError):
         return JSONResponse(status_code=404, content={"error": str(exc)})
 
     @app.exception_handler(PortIncompatibleError)

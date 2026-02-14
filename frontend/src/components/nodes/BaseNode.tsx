@@ -3,8 +3,7 @@ import { Handle, Position } from 'reactflow';
 import { X } from 'lucide-react';
 import type { GraphNode, MediaResult } from '../../types/graph';
 import { useGraphStore } from '../../stores/graphStore';
-import { NODE_CONFIGS } from './nodeConfig';
-import { NODE_GEOMETRIES, PORT_COLORS } from './nodeGeometry';
+import { NODE_REGISTRY, PORT_COLORS } from './nodeRegistry';
 import { NodeBody } from './NodeBody';
 import { NodeStatusBar } from './NodeStatusBar';
 import { MediaResultOverlay } from './MediaResultOverlay';
@@ -18,10 +17,10 @@ export function BaseNode({ node, selected }: BaseNodeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [expanded, setExpanded] = useState<{ result: MediaResult; outputType: string; structured: boolean } | null>(null);
   const deleteNode = useGraphStore(s => s.deleteNode);
-  const config = NODE_CONFIGS[node.type];
+  const config = NODE_REGISTRY[node.type];
   const Icon = config?.icon;
   const isViolet = config?.accent === 'violet';
-  const geo = NODE_GEOMETRIES[node.type] ?? { width: 240, idleHeight: 80 };
+  const geo = config?.geometry ?? { width: 240, idleHeight: 80 };
 
   return (
     <div

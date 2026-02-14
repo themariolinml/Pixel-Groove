@@ -3,10 +3,11 @@
 import logging
 from typing import Dict, Tuple
 
-from ...core.exceptions import GraphNotFoundError, NodeNotFoundError
+from ...core.exceptions import NodeNotFoundError
 from ...core.utils.id_generator import generate_id
 from ...domain.models.graph import Node, NodeStatus, NodeType, Position
 from ...domain.ports import GraphRepositoryPort, StoragePort
+from ._helpers import get_graph_or_raise
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +19,6 @@ class NodeOperations:
         self._repo = repo
         self._storage = storage
 
-    async def _get_graph(self, graph_id: str):
-        graph = await self._repo.load(graph_id)
-        if not graph:
-            raise GraphNotFoundError(graph_id)
-        return graph
-
     async def create_node(
         self,
         graph_id: str,
@@ -33,7 +28,7 @@ class NodeOperations:
         position: Tuple[float, float],
         provider: str = "gemini",
     ) -> Node:
-        graph = await self._get_graph(graph_id)
+        graph = await get_graph_or_raise(self._repo, graph_id)
         node = Node(
             id=generate_id(),
             type=NodeType(node_type),
@@ -47,14 +42,17 @@ class NodeOperations:
         return node
 
     async def update_node(self, graph_id: str, node_id: str, updates: Dict) -> Node:
-        graph = await self._get_graph(graph_id)
+        graph = await get_graph_or_raise(self._repo, graph_id)
         node = graph.get_node(node_id)
         if not node:
             raise NodeNotFoundError(node_id)
 
         has_content_change = False
         if "params" in updates:
-            node.params.update(updates["params"])
+            new_params = updates["params"]
+            if "prompt" in new_params:
+                new_params["human_edited"] = True
+            node.params.update(new_params)
             has_content_change = True
         if "position" in updates:
             x, y = updates["position"]
@@ -70,7 +68,7 @@ class NodeOperations:
         return node
 
     async def delete_node(self, graph_id: str, node_id: str) -> None:
-        graph = await self._get_graph(graph_id)
+        graph = await get_graph_or_raise(self._repo, graph_id)
         graph.remove_node(node_id)
         await self._storage.delete_node_media(node_id)
         await self._repo.save(graph)
@@ -78,13 +76,12 @@ class NodeOperations:
     async def regenerate_node(
         self, graph_id: str, node_id: str, create_variant: bool = True
     ) -> Node:
-        graph = await self._get_graph(graph_id)
+        graph = await get_graph_or_raise(self._repo, graph_id)
         node = graph.get_node(node_id)
         if not node:
             raise NodeNotFoundError(node_id)
 
         if not create_variant:
-            node.generation_history.clear()
             node.result = None
 
         node.status = NodeStatus.IDLE

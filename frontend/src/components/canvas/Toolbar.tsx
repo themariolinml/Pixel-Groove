@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { NODE_GROUPS } from '../nodes/nodeRegistry';
-import { NODE_CONFIGS } from '../nodes/nodeConfig';
+import { NODE_GROUPS, NODE_REGISTRY } from '../nodes/nodeRegistry';
 
 interface ToolbarProps {
   activeType: string | null;
@@ -10,13 +9,13 @@ interface ToolbarProps {
 export function Toolbar({ activeType, onSelect }: ToolbarProps) {
   const renderButton = ({ type, icon: Icon }: { type: string; icon: LucideIcon; fullTitle: string }) => {
     const isActive = activeType === type;
-    const accent = NODE_CONFIGS[type]?.accent ?? 'violet';
+    const accent = NODE_REGISTRY[type]?.accent ?? 'violet';
 
     return (
       <button
         key={type}
         onClick={() => onSelect(isActive ? null : type)}
-        title={NODE_CONFIGS[type]?.label}
+        title={NODE_REGISTRY[type]?.label}
         className={`
           relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150
           ${isActive

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MoreHorizontal, Trash2, Copy, Pencil } from 'lucide-react';
 import { useGraphStore } from '../../stores/graphStore';
-import { NODE_CONFIGS } from '../nodes/nodeConfig';
+import { useContextMenu } from '../../hooks/useContextMenu';
+import { ContextMenu, ContextMenuItem, ContextMenuDivider } from '../common/ContextMenu';
+import { NODE_REGISTRY } from '../nodes/nodeRegistry';
 import { timeAgo } from '../../utils/format';
 import { getWorkflowLabel, getGradient } from '../../utils/graph';
 import type { Graph } from '../../types/graph';
@@ -14,17 +16,9 @@ interface CanvasCardProps {
 }
 
 export function CanvasCard({ graph, onOpen, onDelete, onDuplicate }: CanvasCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { isOpen: menuOpen, setIsOpen: setMenuOpen } = useContextMenu();
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(graph.name);
-
-  // Close menu on outside click
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = () => setMenuOpen(false);
-    setTimeout(() => window.addEventListener('click', handler), 0);
-    return () => window.removeEventListener('click', handler);
-  }, [menuOpen]);
 
   const handleRename = async () => {
     if (newName.trim() && newName.trim() !== graph.name) {
@@ -48,7 +42,7 @@ export function CanvasCard({ graph, onOpen, onDelete, onDuplicate }: CanvasCardP
       <div className={`h-[140px] bg-gradient-to-br ${getGradient(graph)} flex items-center justify-center gap-2`}>
         {graph.nodes.length > 0 ? (
           [...new Set(graph.nodes.map(n => n.type))].slice(0, 5).map(type => {
-            const config = NODE_CONFIGS[type];
+            const config = NODE_REGISTRY[type];
             if (!config) return null;
             const Icon = config.icon;
             return (
@@ -101,36 +95,25 @@ export function CanvasCard({ graph, onOpen, onDelete, onDuplicate }: CanvasCardP
         <MoreHorizontal size={14} />
       </button>
 
-      {/* Context menu */}
-      {menuOpen && (
-        <div
-          className="absolute top-10 right-2 w-[140px] z-50
-            bg-zinc-900/95 backdrop-blur-md border border-white/[0.08]
-            rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]
-            py-1 overflow-hidden"
-          onClick={e => e.stopPropagation()}
-        >
-          <button
-            onClick={() => { setRenaming(true); setNewName(graph.name); setMenuOpen(false); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-zinc-300 hover:bg-white/[0.06] transition-colors"
-          >
-            <Pencil size={12} /> Rename
-          </button>
-          <button
-            onClick={() => { onDuplicate(); setMenuOpen(false); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-zinc-300 hover:bg-white/[0.06] transition-colors"
-          >
-            <Copy size={12} /> Duplicate
-          </button>
-          <div className="border-t border-white/[0.06] my-1" />
-          <button
-            onClick={() => { onDelete(); setMenuOpen(false); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            <Trash2 size={12} /> Delete
-          </button>
-        </div>
-      )}
+      <ContextMenu isOpen={menuOpen}>
+        <ContextMenuItem
+          icon={<Pencil size={12} />}
+          label="Rename"
+          onClick={() => { setRenaming(true); setNewName(graph.name); setMenuOpen(false); }}
+        />
+        <ContextMenuItem
+          icon={<Copy size={12} />}
+          label="Duplicate"
+          onClick={() => { onDuplicate(); setMenuOpen(false); }}
+        />
+        <ContextMenuDivider />
+        <ContextMenuItem
+          icon={<Trash2 size={12} />}
+          label="Delete"
+          onClick={() => { onDelete(); setMenuOpen(false); }}
+          variant="danger"
+        />
+      </ContextMenu>
     </div>
   );
 }

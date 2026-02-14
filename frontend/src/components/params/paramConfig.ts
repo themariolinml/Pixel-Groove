@@ -1,4 +1,6 @@
-export type ParamType = 'select' | 'slider';
+import { IMAGE_MODELS, IMAGE_MODEL_OPTIONS } from '../../constants/models';
+
+export type ParamType = 'select' | 'slider' | 'toggle';
 
 export interface ParamOption {
   label: string;
@@ -10,7 +12,7 @@ export interface ParamDef {
   label: string;
   type: ParamType;
   tooltip: string;
-  defaultValue: string | number;
+  defaultValue: string | number | boolean;
   options?: ParamOption[];
   min?: number;
   max?: number;
@@ -35,6 +37,20 @@ export const PARAM_CONFIGS: Record<string, NodeParamConfig> = {
   generate_image: {
     essential: [
       {
+        key: 'model', label: 'Model', type: 'select', tooltip: 'Image generation model. Imagen Ultra for highest quality, Pro Image for reasoning & references, Flash for speed.',
+        defaultValue: IMAGE_MODELS.IMAGEN,
+        options: IMAGE_MODEL_OPTIONS.map(o => ({ label: o.label, value: o.value })),
+      },
+      {
+        key: 'image_size', label: 'Resolution', type: 'select', tooltip: 'Output resolution. 4K only available with Pro Image.',
+        defaultValue: '1K',
+        options: [
+          { label: '1K', value: '1K' },
+          { label: '2K', value: '2K' },
+          { label: '4K', value: '4K' },
+        ],
+      },
+      {
         key: 'aspect_ratio', label: 'Ratio', type: 'select', tooltip: 'Output image aspect ratio.',
         defaultValue: '1:1',
         options: [
@@ -50,6 +66,11 @@ export const PARAM_CONFIGS: Record<string, NodeParamConfig> = {
   },
   generate_video: {
     essential: [
+      {
+        key: 'reference_mode', label: 'Reference Images', type: 'toggle',
+        tooltip: 'Use connected images as Veo 3.1 reference images for consistent character/style (up to 3). When off, uses single image-to-video mode.',
+        defaultValue: false,
+      },
       {
         key: 'aspect_ratio', label: 'Format', type: 'select', tooltip: 'Output video aspect ratio.',
         defaultValue: '16:9',
@@ -93,6 +114,12 @@ export const PARAM_CONFIGS: Record<string, NodeParamConfig> = {
   },
   transform_image: {
     essential: [
+      {
+        key: 'model', label: 'Model', type: 'select',
+        tooltip: 'Flash/Pro see the original image directly (faster, better quality). Imagen describes then regenerates.',
+        defaultValue: IMAGE_MODELS.FLASH_IMAGE,
+        options: IMAGE_MODEL_OPTIONS.map(o => ({ label: o.label, value: o.value })),
+      },
       {
         key: 'aspect_ratio', label: 'Ratio', type: 'select', tooltip: 'Output image aspect ratio.',
         defaultValue: '1:1',

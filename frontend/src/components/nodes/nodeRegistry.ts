@@ -1,8 +1,9 @@
 import { Type, Image, Film, Mic, Music, ScanEye, Paintbrush2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { NodeType } from '../../types/graph';
 
 export interface NodeTypeDefinition {
-  type: string;
+  type: NodeType;
   label: string;
   fullTitle: string;
   description: string;
@@ -73,3 +74,12 @@ export const NODE_GROUPS = {
   video: Object.values(NODE_REGISTRY).filter(n => n.mediaGroup === 'video'),
   audio: Object.values(NODE_REGISTRY).filter(n => n.mediaGroup === 'audio'),
 } as const;
+
+/** Port colors by media type. */
+export const PORT_COLORS: Record<string, string> = {
+  text: '#a1a1aa',
+  image: '#f472b6',
+  video: '#c084fc',
+  audio: '#22d3ee',
+  any: '#71717a',
+};

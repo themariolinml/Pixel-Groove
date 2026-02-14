@@ -2,6 +2,19 @@ import { create } from 'zustand';
 import { graphsApi, nodesApi, edgesApi } from '../api';
 import type { Graph, GraphNode, Edge } from '../types/graph';
 
+// Helper for immutable array updates
+function updateItemInArray<T extends { id: string }>(
+  items: T[],
+  id: string,
+  update: Partial<T> | T
+): T[] {
+  return items.map(item => item.id === id ? { ...item, ...update } : item);
+}
+
+function updateGraph(graphs: Graph[], graphId: string, update: Partial<Graph> | Graph): Graph[] {
+  return updateItemInArray(graphs, graphId, update);
+}
+
 interface GraphState {
   // Data
   graphs: Graph[];
@@ -67,7 +80,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   loadGraph: async (graphId) => {
     const graph = await graphsApi.get(graphId);
     set(s => ({
-      graphs: s.graphs.map(g => g.id === graphId ? graph : g),
+      graphs: updateGraph(s.graphs, graphId, graph),
       activeGraphId: graphId,
     }));
   },
@@ -89,9 +102,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     if (!graphId) throw new Error('No active graph');
     const node = await nodesApi.create(graphId, type, label, position, params);
     set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId ? { ...g, nodes: [...g.nodes, node] } : g
-      ),
+      graphs: updateGraph(s.graphs, graphId, {
+        ...s.graphs.find(g => g.id === graphId)!,
+        nodes: [...s.graphs.find(g => g.id === graphId)!.nodes, node],
+      }),
     }));
     return node;
   },
@@ -100,13 +114,15 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     const graphId = get().activeGraphId;
     if (!graphId) return;
     const updated = await nodesApi.update(graphId, nodeId, updates);
-    set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId
-          ? { ...g, nodes: g.nodes.map(n => n.id === nodeId ? updated : n) }
-          : g
-      ),
-    }));
+    set(s => {
+      const graph = s.graphs.find(g => g.id === graphId)!;
+      return {
+        graphs: updateGraph(s.graphs, graphId, {
+          ...graph,
+          nodes: updateItemInArray(graph.nodes, nodeId, updated),
+        }),
+      };
+    });
     // Refresh full graph if content changed to pick up downstream stale flags
     if (updates.params || updates.label) {
       get().refreshActiveGraph();
@@ -117,18 +133,17 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     const graphId = get().activeGraphId;
     if (!graphId) return;
     await nodesApi.delete(graphId, nodeId);
-    set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId
-          ? {
-              ...g,
-              nodes: g.nodes.filter(n => n.id !== nodeId),
-              edges: g.edges.filter(e => e.from_node_id !== nodeId && e.to_node_id !== nodeId),
-            }
-          : g
-      ),
-      selectedNodeId: s.selectedNodeId === nodeId ? null : s.selectedNodeId,
-    }));
+    set(s => {
+      const graph = s.graphs.find(g => g.id === graphId)!;
+      return {
+        graphs: updateGraph(s.graphs, graphId, {
+          ...graph,
+          nodes: graph.nodes.filter(n => n.id !== nodeId),
+          edges: graph.edges.filter(e => e.from_node_id !== nodeId && e.to_node_id !== nodeId),
+        }),
+        selectedNodeId: s.selectedNodeId === nodeId ? null : s.selectedNodeId,
+      };
+    });
   },
 
   updateCanvasMemory: async (memory) => {
@@ -136,9 +151,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     if (!graphId) return;
     await graphsApi.update(graphId, { canvas_memory: memory });
     set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId ? { ...g, canvas_memory: memory } : g
-      ),
+      graphs: updateGraph(s.graphs, graphId, {
+        ...s.graphs.find(g => g.id === graphId)!,
+        canvas_memory: memory,
+      }),
     }));
   },
 
@@ -147,9 +163,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     if (!graphId) throw new Error('No active graph');
     const edge = await edgesApi.create(graphId, fromNodeId, fromPortId, toNodeId, toPortId);
     set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId ? { ...g, edges: [...g.edges, edge] } : g
-      ),
+      graphs: updateGraph(s.graphs, graphId, {
+        ...s.graphs.find(g => g.id === graphId)!,
+        edges: [...s.graphs.find(g => g.id === graphId)!.edges, edge],
+      }),
     }));
     // Refresh to pick up stale flags on target + downstream nodes
     get().refreshActiveGraph();
@@ -160,13 +177,15 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     const graphId = get().activeGraphId;
     if (!graphId) return;
     await edgesApi.delete(graphId, edgeId);
-    set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId
-          ? { ...g, edges: g.edges.filter(e => e.id !== edgeId) }
-          : g
-      ),
-    }));
+    set(s => {
+      const graph = s.graphs.find(g => g.id === graphId)!;
+      return {
+        graphs: updateGraph(s.graphs, graphId, {
+          ...graph,
+          edges: graph.edges.filter(e => e.id !== edgeId),
+        }),
+      };
+    });
     // Refresh to pick up stale flags on affected nodes
     get().refreshActiveGraph();
   },
@@ -174,18 +193,15 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setNodeStatus: (nodeId, status, errorMessage) => {
     const graphId = get().activeGraphId;
     if (!graphId) return;
-    set(s => ({
-      graphs: s.graphs.map(g =>
-        g.id === graphId
-          ? {
-              ...g,
-              nodes: g.nodes.map(n =>
-                n.id === nodeId ? { ...n, status, error_message: errorMessage } : n
-              ),
-            }
-          : g
-      ),
-    }));
+    set(s => {
+      const graph = s.graphs.find(g => g.id === graphId)!;
+      return {
+        graphs: updateGraph(s.graphs, graphId, {
+          ...graph,
+          nodes: updateItemInArray(graph.nodes, nodeId, { status, error_message: errorMessage }),
+        }),
+      };
+    });
   },
 
   refreshActiveGraph: async () => {
@@ -193,7 +209,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     if (!graphId) return;
     const graph = await graphsApi.get(graphId);
     set(s => ({
-      graphs: s.graphs.map(g => g.id === graphId ? graph : g),
+      graphs: updateGraph(s.graphs, graphId, graph),
     }));
   },
 }));

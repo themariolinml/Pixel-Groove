@@ -1,5 +1,5 @@
 import type { GraphNode, MediaResult } from '../../types/graph';
-import { NODE_CONFIGS } from './nodeConfig';
+import { NODE_REGISTRY } from './nodeRegistry';
 import { ExpandButton } from './ExpandButton';
 import { API_URL } from '../../api/client';
 
@@ -10,7 +10,7 @@ interface NodeBodyProps {
 }
 
 export function NodeBody({ node, idleHeight, onExpand }: NodeBodyProps) {
-  const config = NODE_CONFIGS[node.type];
+  const config = NODE_REGISTRY[node.type];
   const Icon = config?.icon;
   const prompt = (node.params.prompt as string) || '';
   const result = node.result;

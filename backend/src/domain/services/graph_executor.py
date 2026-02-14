@@ -5,9 +5,9 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from ..models.execution import ExecutionContext, ExecutionEvent, ExecutionStatus
 from ..models.graph import Graph, NodeStatus
-from ..models.media import MediaType
 from ..ports import StoragePort
 from .graph_utils import get_required_nodes, topological_sort, topological_levels
+from .input_resolver import InputResolver
 from .node_executor import NodeExecutor
 
 logger = logging.getLogger(__name__)
@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 class GraphExecutor:
     """Runs a graph by executing nodes in topological order, yielding progress events."""
 
-    def __init__(self, node_executor: NodeExecutor, storage: StoragePort):
+    def __init__(self, node_executor: NodeExecutor, storage: StoragePort, input_resolver: InputResolver):
         self._node_executor = node_executor
         self._storage = storage
+        self._input_resolver = input_resolver
 
     async def execute(
         self, graph: Graph, context: ExecutionContext, canvas_memory: str = ""
@@ -64,7 +65,7 @@ class GraphExecutor:
                     node.status = NodeStatus.RUNNING
                     yield self._event(context, "node_started", node_id=node_id)
 
-                    input_data = await self._resolve_inputs(graph, node_id, node_outputs)
+                    input_data = await self._input_resolver.resolve(graph, node_id, node_outputs)
                     tasks[node_id] = asyncio.create_task(
                         self._node_executor.execute(node, input_data, canvas_memory)
                     )
@@ -110,53 +111,6 @@ class GraphExecutor:
             logger.error("Graph execution failed: %s", e)
             context.status = ExecutionStatus.FAILED
             yield self._event(context, "failed", data={"error": str(e)})
-
-    async def _resolve_inputs(
-        self, graph: Graph, node_id: str, node_outputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Collect data from ALL upstream nodes connected to this node's input ports.
-        Multiple edges can connect to the same port. Same-type inputs are collected
-        as lists so executors can use all of them (e.g. multiple images → text node).
-        """
-        input_data: Dict[str, List[Any]] = {}
-        node = graph.get_node(node_id)
-        if not node:
-            return input_data
-
-        for port in node.input_ports:
-            edges = [
-                e for e in graph.edges
-                if e.connection.to_node_id == node_id
-                and e.connection.to_port_id == port.id
-            ]
-            for edge in edges:
-                source_result = node_outputs.get(edge.connection.from_node_id)
-                if not source_result:
-                    continue
-
-                if source_result.media_type == MediaType.IMAGE:
-                    data = await self._read_result_bytes(source_result)
-                    if data:
-                        input_data.setdefault("images", []).append(data)
-                elif source_result.media_type == MediaType.VIDEO:
-                    data = await self._read_result_bytes(source_result)
-                    if data:
-                        input_data.setdefault("videos", []).append(data)
-                elif source_result.media_type == MediaType.AUDIO:
-                    data = await self._read_result_bytes(source_result)
-                    if data:
-                        input_data.setdefault("audios", []).append(data)
-                else:
-                    input_data.setdefault("texts", []).append(
-                        source_result.urls.original
-                    )
-
-        return input_data
-
-    async def _read_result_bytes(self, result) -> Optional[bytes]:
-        """Read the original media file bytes via the storage port."""
-        return await self._storage.read_media_bytes(result.urls.original)
 
     def _event(
         self,

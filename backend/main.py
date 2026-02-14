@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from src.core.config import get_settings
 from src.core.logging_config import setup_logging
 from src.presentation.middleware.error_handler import add_exception_handlers
-from src.presentation.routes import execution, graphs, nodes
+from src.presentation.routes import batch_execution, execution, experiments, graphs, nodes
 
 
 def create_app() -> FastAPI:
@@ -34,6 +34,8 @@ def create_app() -> FastAPI:
     app.include_router(graphs.router)
     app.include_router(nodes.router)
     app.include_router(execution.router)
+    app.include_router(batch_execution.router)
+    app.include_router(experiments.router)
 
     media_path = Path(settings.STORAGE_PATH) / "media"
     media_path.mkdir(parents=True, exist_ok=True)

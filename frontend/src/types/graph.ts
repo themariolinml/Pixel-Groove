@@ -1,10 +1,13 @@
 // Matches backend DTOs exactly
 
+export type PortType = 'image' | 'text' | 'audio' | 'video' | 'any';
+export type PortDirection = 'input' | 'output';
+
 export interface Port {
   id: string;
   name: string;
-  port_type: string; // "image" | "text" | "audio" | "video" | "any"
-  direction: string; // "input" | "output"
+  port_type: PortType;
+  direction: PortDirection;
   required: boolean;
   description: string;
 }
@@ -22,28 +25,32 @@ export interface MediaMetadata {
   size_bytes?: number;
 }
 
+export type MediaType = 'image' | 'text' | 'audio' | 'video';
+
 export interface MediaResult {
   id: string;
   timestamp: number;
-  media_type: string;
+  media_type: MediaType;
   urls: MediaUrls;
   prompt: string;
   metadata: MediaMetadata;
   generation_params: Record<string, unknown>;
 }
 
+export type NodeType = 'generate_text' | 'generate_image' | 'generate_video' | 'generate_speech' | 'generate_music' | 'analyze_image' | 'transform_image';
+export type NodeStatus = 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+
 export interface GraphNode {
   id: string;
-  type: string;
+  type: NodeType;
   label: string;
   params: Record<string, unknown>;
   position: { x: number; y: number };
   provider: string;
-  status: string; // "idle" | "queued" | "running" | "completed" | "failed"
+  status: NodeStatus;
   input_ports: Port[];
   output_ports: Port[];
   result?: MediaResult;
-  generation_history: MediaResult[];
   error_message?: string;
   stale: boolean;
 }

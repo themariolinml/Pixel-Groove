@@ -2,11 +2,12 @@ import asyncio
 import logging
 from typing import AsyncGenerator, Dict
 
-from ...core.exceptions import ExecutionError, GraphNotFoundError
+from ...core.exceptions import ExecutionError
 from ...core.utils.id_generator import generate_id
 from ...domain.models.execution import ExecutionContext, ExecutionStatus
 from ...domain.ports import CanvasMemoryPort, GraphRepositoryPort
 from ...domain.services.graph_executor import GraphExecutor
+from ._helpers import get_graph_or_raise
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,7 @@ class ExecutionOperations:
         self._queues: Dict[str, asyncio.Queue] = {}
 
     async def start_execution(self, graph_id: str, output_node_ids: list[str], force: bool = False) -> str:
-        graph = await self._repo.load(graph_id)
-        if not graph:
-            raise GraphNotFoundError(graph_id)
+        graph = await get_graph_or_raise(self._repo, graph_id)
 
         execution_id = generate_id()
         context = ExecutionContext(

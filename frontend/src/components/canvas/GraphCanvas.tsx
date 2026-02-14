@@ -14,27 +14,8 @@ import 'reactflow/dist/style.css';
 import { useGraphStore } from '../../stores/graphStore';
 import { useActiveGraph } from '../../hooks/useActiveGraph';
 import { nodeTypes } from '../nodes';
-import type { GraphNode, Edge } from '../../types/graph';
-
-function toRFNodes(nodes: GraphNode[]): RFNode[] {
-  return nodes.map(n => ({
-    id: n.id,
-    type: n.type,
-    position: n.position,
-    data: n,
-    selected: false,
-  }));
-}
-
-function toRFEdges(edges: Edge[]): RFEdge[] {
-  return edges.map(e => ({
-    id: e.id,
-    source: e.from_node_id,
-    sourceHandle: e.from_port_id,
-    target: e.to_node_id,
-    targetHandle: e.to_port_id,
-  }));
-}
+import { toRFNodes, toRFEdges } from '../../utils/reactFlowMapping';
+import { REACT_FLOW_DEFAULTS, BACKGROUND_DEFAULTS, CONTROLS_DEFAULTS, MINIMAP_DEFAULTS } from '../../config/reactFlowDefaults';
 
 export function GraphCanvas() {
   const addEdge = useGraphStore(s => s.addEdge);
@@ -92,6 +73,7 @@ export function GraphCanvas() {
   return (
     <div className="absolute inset-0 z-0">
       <ReactFlow
+        {...REACT_FLOW_DEFAULTS}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -102,20 +84,10 @@ export function GraphCanvas() {
         onEdgesDelete={onEdgesDelete}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
-        fitView
-        proOptions={{ hideAttribution: true }}
-        defaultEdgeOptions={{
-          style: { stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1.5 },
-          type: 'default',
-        }}
       >
-        <Background color="rgba(255,255,255,0.03)" gap={24} />
-        <Controls className="!bg-surface !border-border !rounded-lg" />
-        <MiniMap
-          nodeColor={() => '#333'}
-          maskColor="rgba(0,0,0,0.7)"
-          className="!bg-surface !border-border !rounded-lg"
-        />
+        <Background {...BACKGROUND_DEFAULTS} />
+        <Controls {...CONTROLS_DEFAULTS} />
+        <MiniMap {...MINIMAP_DEFAULTS} />
       </ReactFlow>
     </div>
   );

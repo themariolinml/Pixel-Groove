@@ -1,12 +1,9 @@
-import asyncio
-import json
-
 from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
 
 from ...application.dto.requests import ExecuteGraphRequest
 from ...application.use_cases.execution_operations import ExecutionOperations
 from ...di import get_execution_operations
+from ..sse import sse_stream
 
 router = APIRouter(prefix="/api/executions", tags=["execution"])
 
@@ -28,17 +25,7 @@ async def stream_execution(
     execution_id: str,
     ops: ExecutionOperations = Depends(get_execution_operations),
 ):
-    async def event_generator():
-        async for event in ops.stream_execution(execution_id):
-            data = json.dumps(event)
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0.05)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
-    )
+    return await sse_stream(ops.stream_execution(execution_id))
 
 
 @router.delete("/{execution_id}")

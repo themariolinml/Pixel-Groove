@@ -32,7 +32,8 @@ class GraphOperations:
         return graph
 
     async def list_graphs(self) -> List[Graph]:
-        return await self._repo.list_all()
+        graphs = await self._repo.list_all()
+        return [g for g in graphs if g.experiment_id is None]
 
     async def update_graph(self, graph_id: str, name: str | None = None, canvas_memory: str | None = None) -> Graph:
         graph = await self.get_graph(graph_id)
@@ -89,12 +90,6 @@ class GraphOperations:
                 new_result = copy.deepcopy(old_node.result)
                 new_result.urls = _remap_media_urls(new_result.urls)
 
-            new_history = []
-            for r in old_node.generation_history:
-                nr = copy.deepcopy(r)
-                nr.urls = _remap_media_urls(nr.urls)
-                new_history.append(nr)
-
             # Copy media files via storage port
             await self._storage.duplicate_node_media(old_id, new_id)
 
@@ -109,7 +104,6 @@ class GraphOperations:
                 input_ports=new_input_ports,
                 output_ports=new_output_ports,
                 result=new_result,
-                generation_history=new_history,
                 error_message=old_node.error_message,
                 stale=old_node.stale,
             )

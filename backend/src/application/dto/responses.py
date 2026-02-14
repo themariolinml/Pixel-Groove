@@ -32,6 +32,7 @@ class MediaResultDTO(BaseModel):
     prompt: str
     metadata: MediaMetadataDTO
     generation_params: Dict
+    original_prompt: Optional[str] = None
 
 
 class NodeDTO(BaseModel):
@@ -45,7 +46,6 @@ class NodeDTO(BaseModel):
     input_ports: List[PortDTO]
     output_ports: List[PortDTO]
     result: Optional[MediaResultDTO] = None
-    generation_history: List[MediaResultDTO] = []
     error_message: Optional[str] = None
     stale: bool = False
 

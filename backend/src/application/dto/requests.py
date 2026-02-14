@@ -41,3 +41,9 @@ class ExecuteGraphRequest(BaseModel):
     graph_id: str
     output_node_ids: List[str]
     force: bool = False
+
+
+class BatchExecuteRequest(BaseModel):
+    experiment_id: str
+    graph_ids: List[str]
+    force: bool = False

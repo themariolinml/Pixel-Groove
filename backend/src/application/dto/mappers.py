@@ -37,7 +37,6 @@ def node_to_dto(node: Node) -> NodeDTO:
             for p in node.output_ports
         ],
         result=media_to_dto(node.result) if node.result else None,
-        generation_history=[media_to_dto(r) for r in node.generation_history],
         error_message=node.error_message,
         stale=node.stale,
     )
@@ -56,6 +55,7 @@ def media_to_dto(m: MediaResult) -> MediaResultDTO:
             size_bytes=m.metadata.size_bytes,
         ),
         generation_params=m.generation_params,
+        original_prompt=m.original_prompt,
     )
 
 

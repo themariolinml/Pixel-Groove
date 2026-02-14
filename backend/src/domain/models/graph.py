@@ -5,6 +5,7 @@ from enum import Enum
 
 from .ports import Port, PortType, PortDirection, Connection
 from .media import MediaResult
+from ...core.exceptions import CycleDetectedError, PortIncompatibleError
 
 
 class NodeType(Enum):
@@ -77,8 +78,6 @@ class Node:
     input_ports: List[Port] = field(default_factory=list)
     output_ports: List[Port] = field(default_factory=list)
     result: Optional[MediaResult] = None
-    #TODO: do we need generation_history? I don't think it's used in the Frontend
-    generation_history: List[MediaResult] = field(default_factory=list)
     error_message: Optional[str] = None
     stale: bool = False
 
@@ -112,7 +111,6 @@ class Node:
         return next((p for p in self.output_ports if p.id == port_id), None)
 
     def add_generation(self, result: MediaResult) -> None:
-        self.generation_history.append(result)
         self.result = result
         self.status = NodeStatus.COMPLETED
         self.stale = False
@@ -129,7 +127,6 @@ class Node:
             "input_ports": [p.to_dict() for p in self.input_ports],
             "output_ports": [p.to_dict() for p in self.output_ports],
             "result": self.result.to_dict() if self.result else None,
-            "generation_history": [r.to_dict() for r in self.generation_history],
             "error_message": self.error_message,
             "stale": self.stale,
         }
@@ -137,7 +134,6 @@ class Node:
     @classmethod
     def from_dict(cls, d: dict) -> "Node":
         result = MediaResult.from_dict(d["result"]) if d.get("result") else None
-        history = [MediaResult.from_dict(r) for r in d.get("generation_history", [])]
         return cls(
             id=d["id"],
             type=NodeType(d["type"]),
@@ -149,7 +145,6 @@ class Node:
             input_ports=[Port.from_dict(p) for p in d.get("input_ports", [])],
             output_ports=[Port.from_dict(p) for p in d.get("output_ports", [])],
             result=result,
-            generation_history=history,
             error_message=d.get("error_message"),
             stale=d.get("stale", False),
         )
@@ -203,6 +198,7 @@ class Graph:
     updated_at: float = field(default_factory=time.time)
     nodes: Dict[str, Node] = field(default_factory=dict)
     edges: List[Edge] = field(default_factory=list)
+    experiment_id: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -213,6 +209,7 @@ class Graph:
             "updated_at": self.updated_at,
             "nodes": {nid: n.to_dict() for nid, n in self.nodes.items()},
             "edges": [e.to_dict() for e in self.edges],
+            "experiment_id": self.experiment_id,
         }
 
     @classmethod
@@ -226,6 +223,7 @@ class Graph:
             created_at=d.get("created_at", now),
             updated_at=d.get("updated_at", now),
             nodes=nodes, edges=edges,
+            experiment_id=d.get("experiment_id"),
         )
 
     def add_node(self, node: Node) -> None:
@@ -247,12 +245,12 @@ class Graph:
             raise ValueError("Source or target port not found")
 
         if not from_port.is_compatible_with(to_port):
-            raise ValueError(
-                f"Incompatible port types: {from_port.port_type.value} -> {to_port.port_type.value}"
+            raise PortIncompatibleError(
+                from_port.port_type.value, to_port.port_type.value
             )
 
         if self._would_create_cycle(conn):
-            raise ValueError("Connection would create a cycle")
+            raise CycleDetectedError(conn.from_node_id, conn.to_node_id)
 
         self.edges.append(edge)
 
